@@ -1,0 +1,105 @@
+---
+title: '2.9'
+author: "Sai Ananthula - emw832"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r}
+  Auto <- read.csv("Auto.csv", header = T, na.string = "?", stringsAsFactors =  T)
+  head(Auto)
+```
+The predictors that are quantitative are Cylinder, displacement, horsepower, weight, and acceleration. The only qualitative predictor is year since it is a category.
+
+Ranges for Predictors
+```{r}
+  range(Auto$mpg)
+  range(Auto$cylinders)
+  range(Auto$displacement)
+  range(Auto$horsepower)
+  range(Auto$weight)
+  range(Auto$acceleration)
+```
+
+
+Standard Deviation of Predictors
+```{r}
+  sd(Auto$mpg)
+  sd(Auto$cylinders)
+  sd(Auto$displacement)
+  sd(Auto$horsepower)
+  sd(Auto$weight)
+  sd(Auto$acceleration)
+
+```
+Mean of Predictors
+```{r}
+  mean(Auto$mpg)
+  mean(Auto$cylinders)
+  mean(Auto$displacement)
+  mean(Auto$horsepower)
+  mean(Auto$weight)
+  mean(Auto$acceleration)
+```
+
+Removing rows 10 - 85
+```{r}
+  Auto <- Auto[-(10:85),]
+```
+
+
+Range of Predictors post Row Removal
+```{r}
+  range(Auto$mpg)
+  range(Auto$cylinders)
+  range(Auto$displacement)
+  range(Auto$horsepower)
+  range(Auto$weight)
+  range(Auto$acceleration)
+```
+Standard Deviation of Predictors post Row Removal
+```{r}
+  sd(Auto$mpg)
+  sd(Auto$cylinders)
+  sd(Auto$displacement)
+  sd(Auto$horsepower)
+  sd(Auto$weight)
+  sd(Auto$acceleration)
+```
+
+Mean of Predictors post Row Removal
+```{r}
+  mean(Auto$mpg)
+  mean(Auto$cylinders)
+  mean(Auto$displacement)
+  mean(Auto$horsepower)
+  mean(Auto$weight)
+  mean(Auto$acceleration)
+```
+
+Scatter plots looking at the relationship between MPG and certain key predictors
+```{r}
+  plot(Auto$weight,Auto$mpg)
+  plot(Auto$displacement,Auto$mpg)
+  plot(Auto$horsepower,Auto$mpg)
+```
+It seems weight has the strongest relationship with MPG since as weight increase the 
+mpg decrease. Increased displacement and horsepower are also related to lower MPG.
+All three of these predictors are more common on automobiles that perform less efficiently so
+its not much of a surprise that they correlate negatively with MPG. 
+
+
+Influence of year of make on MPG
+```{r}
+plot(Auto$year,Auto$mpg)
+```
+It seems the newer cars have better has mileage which is no surprise but there is potential
+for deeper analysis.
+
+
+Other variables that would help is if each observation had the manufacturer and type of car.
+It would allow for deeper analysis since a sedan 9/10 times has better MPG than a pick up or SUV. 
+Also, if you wanted to drill down deeper listing the model and trim of each observation to 
+make some very precise insights since two trims of one model can have different gas mileage.
+

@@ -1,0 +1,253 @@
+---
+title: "AS7"
+author: "Sai Ananthula"
+date: "2023-04-10"
+output: html_document
+---
+
+
+
+```{r}
+library(ISLR2)
+library(tree)
+library(randomForest)
+library(gbm)
+library(BART)
+library(tidyverse)
+```
+
+3.
+
+```{r}
+prop_class1 <- seq(0, 1, 0.01)
+prop_class2 <- 1 - prop_class1
+
+
+classification_error <- 1 - pmax(prop_class1, prop_class2)
+
+gini <- prop_class1*(1-prop_class1) + prop_class2*(1-prop_class2)
+
+entropy <- -prop_class1*log(prop_class1) - prop_class2*log(prop_class2)
+
+
+data.frame(prop_class1, prop_class2, classification_error, gini, entropy) %>%
+  pivot_longer(cols = c(classification_error, gini, entropy), names_to = "metric") %>%
+  ggplot(aes(x = prop_class1, y = value, col = factor(metric))) + 
+  geom_line(size = 1) 
+```
+
+8.
+
+```{r}
+set.seed(715)
+
+index <- sample(1:nrow(Carseats), nrow(Carseats) / 2)
+train <- Carseats[index,]
+test <- Carseats[-index,]
+```
+
+```{r}
+
+model_tree <- tree(Sales ~., train)
+plot(model_tree)
+text(model_tree, pretty = 0, cex = 0.5)
+summary(model_tree)
+
+```
+The tree has 16 terminal nodes.
+
+
+
+```{r}
+preds <- predict(model_tree,test)
+mean((preds - test$Sales)^2)
+```
+
+I obtained a mSE of 5.58.
+
+```{r}
+cv_model <- cv.tree(model_tree, K = 10)
+
+names(cv_model)
+```
+
+```{r}
+plot(cv_model$size, cv_model$dev, type =  "b")
+```
+8c.It sems pruning the tree could help if the number of predictors
+was reduced to 10. 
+
+
+```{r}
+model_prune <- prune.tree(model_tree, best =10 )
+
+preds_2 <-  predict(model_prune,test)
+
+mean((preds_2 - test$Sales)^2)
+
+```
+
+8c. The pruning did reduce the MSE from 5.58 to 5.25.
+
+
+```{r}
+bagged_model <- randomForest(y = train$Sales, 
+                                   x = train[ ,-1], importance = T)
+
+preds_3 <- predict(bagged_model, test)
+mean((preds_3 - test$Sales)^2)
+                                  
+```
+8d. Test MSE is down to 4.09 from 5.25 which is a signifcant 
+improvement. 
+
+```{r}
+importance(bagged_model)
+```
+8d. It seems shelf location, price, age, advertising. and compprice are important in decreasing order. 
+
+
+```{r}
+random_model <- randomForest(y = train$Sales, 
+                                   x = train[ ,-1], mtry = ncol(train) /2 ,importance = T)
+
+preds_4 <- predict(random_model, test)
+mean((preds_4 - test$Sales)^2)
+```
+8e. I got a MSE of 3.57 so random forests result in a lower MSE.
+
+
+```{r}
+importance(random_model)
+```
+8d. The same predictors as reported from the bagging are important. 
+
+
+```{r}
+set.seed(715)
+x <- Carseats[, 2:11]
+y <- Carseats[,"Sales"]
+
+xtrain <- x[index, ]
+ytrain <- y[index]
+xtest <-x[-index,]
+ytest <-y[-index]
+
+bart_model <- gbart(xtrain,ytrain, x.test= xtest)
+```
+
+```{r}
+bart <- bart_model$yhat.test.mean
+
+mean((ytest - bart)^2)
+```
+
+8f. BART further reduced MSE to 2.09
+
+
+## 9
+
+```{r}
+head(OJ)
+```
+
+
+```{r}
+
+set.seed(715)
+
+index_oj <- sample(nrow(OJ),800)
+train_oj <- OJ[index,]
+test_oj <- OJ[-index,]
+```
+
+```{r}
+
+orange_tree <- tree(Purchase  ~., train_oj)
+
+summary(orange_tree)
+
+```
+9b. The tree has 7 terminal nodes and a training error rate of 16.5%. it also is only using 2 of the variables out of 17.
+
+```{r}
+orange_tree
+```
+9c.I will use node 7 which is when an observation had a value of LoyalCH greater than 0.5036 and then a value of LoyalCh > 0.753. It has 280 observations in it. 
+
+
+```{r}
+plot(orange_tree)
+text(orange_tree, pretty = 0, cex = 0.5)
+```
+
+9d.It shows that only 2 predictors are used and they are used multiple times but with different bounds.
+
+```{r}
+orange_pred <- predict(orange_tree, test_oj, type = "class")
+
+table(orange_pred,test_oj$Purchase)
+```
+test error rate = 211/270 - .7814
+9e.  means this approach is correct 78.14 of the time.
+
+
+
+```{r}
+
+orange_model <- cv.tree(orange_tree, FUN = prune.misclass)
+
+
+plot(orange_model$size, orange_model$dev, type =  "b")
+orange_model
+
+```
+
+
+
+
+
+9h. It seems 5 terminal nodes is the optimal error rate.
+
+
+
+```{r}
+prune_oj <- prune.tree(orange_tree , best = 5)
+summary(prune_oj)
+```
+The pruned tree has 2 less terminal nodes but ends with the same training error
+
+```{r}
+orange_preds_2 = predict(prune_oj, newdata = test_oj, type="class")
+
+table(orange_preds_2,test_oj$Purchase)
+
+```
+
+test error rate = 211/270 - .7814
+9i.  means this approach is correct 78.14 of the time.
+
+THe pruning changed nothing since the initial pruned model has such a low number of terminal nodes and only used 2 predictors. The training and test error between the 2 are identical.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

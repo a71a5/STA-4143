@@ -1,0 +1,165 @@
+---
+title: "Assignment 6"
+author: "Sai Ananthula"
+date: '2023-04-09'
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(caret)
+library(ISLR2)
+library(gam)
+library(splines)
+library(boot)
+library(leaps)
+```
+
+```{r}
+set.seed(715)
+
+
+cv_error <- vapply(
+  1:10, 
+  function(i)
+    {
+    poly_model <- glm(wage ~ poly(age, i), data = Wage)
+    cv.glm(Wage, poly_model, K = 5)$delta[1]
+  },
+  1.0
+)
+cv_stderr <- sd(cv_error) / sqrt(5)
+
+cv_stderr
+```
+
+```{r}
+ggplot() +
+  geom_path(aes(x = 1:10, y = cv_error)) +
+  ylab("5-fold CV Error") +
+  xlab("Polynomial Degree") 
+
+```
+6a. It would be best to use a third degree polynomial even though a 6th degree
+is equivalent due to the one-standard-error rule.
+
+
+```{r}
+fit <- lapply(1:5, function(i) lm(wage ~ poly(age, i), data = Wage))
+do.call(anova, fit)
+```
+
+6a. Anova backs up a third degree polynomial.
+
+6b.
+
+```{r}
+
+cuts <- 1:10
+
+cv_error <- vapply(
+  cuts + 1,
+  function(x) {
+    Wage$age_cut <- cut(Wage$age, x)
+    fit <- glm(wage ~ age_cut, data = Wage)
+    cv.glm(Wage, fit, K = 5)$delta[1]
+  },
+  1.0
+)
+cv_stderr <- sd(cv_error) / sqrt(10)
+cv_stderr
+
+```
+
+```{r}
+ggplot() +
+  geom_path(aes(x = cuts, y = cv_error)) +
+  ylab("5-fold CV error") +
+  xlab("Number of breaks")
+```
+
+6b. 5-fold cv seems to suggest 7 cuts is the optimal number due to lowest
+cv error. Due to the one-standard-error rule, the step function should
+have 6 cuts.
+
+
+10.
+
+```{r}
+train_idx <- sample(seq_len(nrow(College)), 0.75 * nrow(College))
+
+
+train <- College[train_idx,]
+test <- College[-train_idx,]
+```
+
+
+
+```{r}
+
+fwd_step <- regsubsets(Outstate ~ ., data = train, method = "forward", nvmax = ncol(College) - 5)
+fwd_summary <- summary(fwd_step)
+fwd_summary
+```
+
+
+
+```{r}
+ggplot() +
+  geom_path(aes(x = seq_along(fwd_summary$bic), y = fwd_summary$bic)) 
+  
+```
+10a. The Bayesian Information Criteria seems to be lowest at round the 7.5 predictor
+mark but you can't have half a predictor so most likely a model with 6 predictors is
+good enough. The model would be Outstate ~ PrivateYes + Room.Board + PhD + perc.alumni +
+Expend + Grad.Rate
+
+
+```{r}
+fit <- gam(Outstate ~ Private + s(Room.Board) + s(PhD) + s(perc.alumni) + s(Expend) + s(Grad.Rate), data = train)
+par(mfrow = c(3,4))
+plot(fit, se = TRUE)
+```
+
+6b. Grad.Rate and Ph.D both seem to non-linear relationships with OutState and could
+possible be better explained with a piecewise function. Expend also has a non-linear 
+relationship with OutState.
+
+
+
+```{r}
+preds <- predict(fit, newdata = test)
+mse<- mean((preds - test$Outstate)^2)
+
+fit_lm <- lm(Outstate ~ Private + Room.Board  + PhD + perc.alumni + Expend + Grad.Rate, data = train)
+preds_linear <- predict(fit_lm, newdata = test)
+mse_linear <- mean((preds_linear - test$Outstate)^2)
+
+sqrt(mse_linear)
+sqrt(mse)
+```
+6c. The MSE is lower for the non-linear model so the non-linear model outpeforms the 
+linear model.
+
+
+6d. 
+
+```{r}
+summary(fit)
+```
+
+6d. There is strong evidence for non-linearity for Expend and weaker evidence
+for non-linearity for Grad.Rate
+
+
+
+
+
+
+
+
+
+
+
+
+

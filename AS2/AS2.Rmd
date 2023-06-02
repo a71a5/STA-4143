@@ -1,0 +1,142 @@
+---
+title: '3'
+author: "Sai Ananthula - emw832"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r}
+library(MASS)
+library(ISLR2)
+```
+2. The KNN classifier when given a point h uses n number of points near it to classify it 
+while the KNN regression when given predictor h uses n number of points near it to 
+calculate the observation for it. The classifer is qualitiative and the regression
+quantitative. 
+
+
+9.
+
+a.
+```{r}
+pairs(Auto)
+```
+
+```{r}
+head(Auto)
+```
+
+b.
+```{r}
+cor(subset(Auto, select=-name))
+```
+c.
+```{r}
+mpg.fit <- lm(mpg ~ .- name,data = Auto)
+summary(mpg.fit)
+```
+c1. There is a relationship between the predictos and the response variable 
+which in this case is mpg. Tge F-Stat is 252.4 which is far from 1 so there 
+is reasonable evidence to reject the null hypothesis. 
+
+c2. The predictors that seemed to be the most correlated with MPG are weight, year,
+origin, and displacement in that order.
+
+c3.It mean every year that passes the mpg goes up .75.
+
+
+d.
+
+```{r}
+par(mfrow = c(2, 2))
+plot(mpg.fit)
+```
+ 14 is an outlier with high leverage but a normalish standardized residual. Also,
+linear might not be the best fit for this due to the curve in residuals vs fitted chart.
+
+e.
+```{r}
+mpg2.fit <- lm(mpg ~ weight * displacement + year * origin, data = Auto )
+summary(mpg2.fit)
+```
+There seems to be a interaction effect between weight and displacement and another
+interaction effect year:origin. 
+
+
+
+f.
+```{r}
+mpg3.fit <- lm(mpg ~ sqrt(weight) * displacement + year * origin, data = Auto )
+summary(mpg3.fit)
+```
+
+By taking the square root of weight the r^2 value increase by .007.
+
+
+
+10.
+a.
+```{r}
+summary(Carseats)
+car.fit <- lm(Sales ~ Price + Urban + US, data = Carseats)
+summary(car.fit)
+```
+b. There is most likely a relationship between price ans sales due to the p-value. The negative
+coefficient suggests as price increases sales decrease.
+
+There is not a relationship between urban location and sales due to the high p value.
+
+There is a relationship between USYes and sales due to the low p value. Since
+this variable is qualitative it mean stores in the US make more sales.  
+
+c. Sales = 13.04 - .054Price - .022UrbanYes + 1.201USYes
+
+d. Price and USYes due their low p-values. 
+
+e.
+
+```{r}
+car2.fit <- lm(Sales ~ Price + US, data = Carseats)
+summary(car2.fit)
+```
+
+f. Equally bad due to R^2 that are hovering around .2393 and F-statistics in the 40-65 range.
+The model in e is marginally better but not by much.
+
+g. 
+
+```{r}
+confint(car2.fit)
+```
+
+
+h. 
+```{r}
+plot(predict(car2.fit), rstudent(car2.fit))
+```
+Everything is bounded from -3 to  so there seems to not be any potenital outliers. 
+
+
+12a. They are the same when the coefficient is the same and these is
+a lack of noise.
+
+12b. 
+```{r}
+x = rnorm(100)
+y = 0.5 * x + rnorm(100)
+coefficients(lm(x ~ y + 0))
+coefficients(lm(y ~ x + 0))
+```
+12c.
+```{r}
+x  =rnorm(100)
+y = 1*x
+coefficients(lm(x ~ y + 0))
+coefficients(lm(y ~ x + 0))
+```
+
+
+
+

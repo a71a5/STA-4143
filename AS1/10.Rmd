@@ -1,0 +1,144 @@
+---
+title: '2.10'
+author: "Sai Ananthula - emw832"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document:
+    df_print: paged
+---
+
+```{r}
+
+  library("ISLR2")
+```
+
+```{r}
+  Boston
+```
+There are 506 rows and 13 dolumns. The rows represent different suburbs in boston and the columns represent different stats about the suburbs.
+
+```{r}
+  ?Boston
+```
+
+```{r}
+  summary(Boston)
+```
+Pairwise Scatterplots
+```{r}
+  pairs(Boston)
+  
+```
+```{r}
+  plot(Boston$age,Boston$crim)
+  plot(Boston$indus,Boston$dis)
+  plot(Boston$age,Boston$nox)
+  plot(Boston$nox,Boston$crim)
+  plot(Boston$rm,Boston$crim)
+```
+As the age of units built prior to 1940 increases so does the crime rate.  The amount of industrial acerage has a 
+negative correlation with distance to employment centers. Thats very interesting since you would assume industrail acerage
+would house companies that employ tons of people but perhaps the 5 employment centers in the data are not of the industrail nature.
+As the number of units build prior to 1940 increases so does the nitric oxide concentration. Also, both average number of rooms per dwelling
+and nitric oxide levels seem to have some correlation with crime rate.
+
+
+Looking for a relationship between Age of Units and Crime Rate
+
+```{r}
+  crime_age <- lm(Boston$crim~Boston$age)
+  summary(crime_age)
+  plot(Boston$age, Boston$crim)
+  abline(crime_age)
+```
+The summary does indicate some sort of relationship due to values of p-value and f-stat but the problem is the multiple r-squared value is very low. 
+Also, a quick glance at the chart shows the line passes through a good chunk of the data but the function is probably not linear
+
+
+Looking for a relationship between Nitrogen Oxide Concentration and Crime Rate
+```{r}
+  crime_rm <- lm(Boston$crim~Boston$rm)
+  summary(crime_rm)
+  plot(Boston$rm, Boston$crim)
+  abline(crime_rm)
+```
+The summary does indicate some sort of relationship due to the highly signicant p-value but the function "fits" the data very poorly. In all
+likelyhood there is a relationship but is of the non-linear variety.
+
+
+
+```{r}
+  crime_nox <- lm(Boston$crim~Boston$nox)
+  summary(crime_nox)
+  plot(Boston$nox, Boston$crim)
+  abline(crime_nox)
+```
+
+The summary does indicate some sort of relationship due to the highly signicant p-value but the function "fits" the data very poorly. In all
+likelyhood there is a relationship but is of the non-linear variety.
+
+
+Amount of Units built prior to 1940, nitric oxide concentration, and avg number of rooms per dwelling all seem to have some
+impact of crime rates. The amount of old units relationship to crime rate seems to somewhat linear but most likely still is curved. 
+Both nitrix oxide and avg number of rooms seem to have a almost quadratic relation to crime rate.
+
+
+```{r}
+  summary(Boston)
+```
+Areas with High Crime Rates
+```{r}
+  high_crime <- subset(Boston, Boston$crim > 3.5)
+  print(high_crime)
+```
+The range of crime rates if from .00632 to 88.9762.
+
+
+Areas with High Tax Rates
+```{r}
+  high_tax <- subset(Boston, Boston$tax > 666)
+  print(high_tax)
+```
+The range of crime rates if from 187.0 711.
+
+
+Areas with Pupil:Teacher Ratios
+```{r}
+  high_pt <- subset(Boston, Boston$ptratio > 20.2)
+  print(high_pt)
+```
+The range of crime rates if from 12.6 to 22.
+
+
+Areas that border the Charles river
+```{r}
+  river_side <- subset(Boston, Boston$chas == 1)
+  print(river_side)
+```
+There are 35 suburbs that bound the Charles river.
+
+```{r}
+  summary(Boston)
+```
+The median pupil:teacher ratio is 19.05.
+
+Areas with Lowest Home Value
+```{r}
+    lowest <- subset(Boston, Boston$medv == 5)
+    print(lowest)
+```
+
+Both of the areas with lowest home values have extremely higher crime rates as well as identaical percentages of land with industrail use. They both have the same nitrogen oxside concentration and percentage of units that were 
+build before 1940. Their predictors across the board are either equal or within in spitting distance of each other. This leads me to include if they are so similar they most likely are next to each other.
+
+```{r}
+  rooms <- subset(Boston, Boston$rm > 7)
+  print(rooms)
+```
+```{r}
+  room_8 <- subset(Boston, Boston$rm > 8)
+  print(room_8)
+```
+13 suburbs have an average number of rooms per dwelling above 7. These are probably areas with lots of apartments and high density housing. 
+

@@ -1,0 +1,280 @@
+---
+title: "Assignment 5"
+author: "Sai Ananthula"
+output: html_notebook
+---
+
+```{r}
+library(ISLR)
+library(leaps)
+library(glmnet)
+library(pls)
+```
+2a. 3 is correct since the lasso is less flexible but worth it if the 
+small increase in bias is offset by the larger reduction in variance. It also
+can remove non-essential predictors.
+
+2b. 3 is correct since ridge-reduction and lasso are very similar but lasso
+can remove a predictor in its entirety. Ridge-Reduction would only result in a 
+very small coef. 
+
+2c. 2 is the correct since non-linear models have less bias as well as being
+less biased than a model generated from least-squares regression. 
+
+
+
+9. 
+
+
+```{r}
+attach(College)
+```
+
+```{r}
+x = model.matrix(Apps~.,College)[,-1]
+y = Apps
+
+set.seed(1)
+
+train <- sample (c(TRUE , FALSE), nrow (Hitters),
+replace = TRUE)
+test <- (!train)
+
+y.test=y[test]
+
+
+
+
+```
+
+```{r}
+linear <- lm(Apps~., data = College[train,])
+linear.pred <- predict(linear,College[test,],type = "response")
+mean((linear.pred-College[test,]$Apps)^2)
+```
+
+```{r}
+
+train.x<-model.matrix(Apps~.,data=College[train,])
+train.y<-College[train,]$Apps
+test.x<-model.matrix(Apps~.,data=College[test,])
+test.y<-College[test,]$Apps
+
+ridge.fit<-cv.glmnet(train.x,train.y, alpha = 0)
+lam.ridge<- ridge.fit$lambda.min
+
+ridge.pred<-predict(ridge.fit, s=lam.ridge, newx=test.x)
+
+mean((ridge.pred-test.y)^2)
+```
+```{r}
+lasso.fit <- cv.glmnet(train.x,train.y, alpha = 1)
+
+lam.lasso<- lasso.fit$lambda.min
+
+lasso.pred<-predict(lasso.fit, s=lam.ridge, newx=test.x)
+
+mean((lasso.pred-test.y)^2)
+```
+
+```{r}
+pcr.fit <- pcr(Apps~., data = College[train,], scale = TRUE, validation = "CV")
+summary(pcr.fit)
+```
+```{r}
+
+xcol<-1:17
+
+mse_pcr_comps<-numeric(length = length(xcol))
+
+for (i in 1:length(xcol))
+  { 
+    mse_pcr_comps[i]<-mean(
+        (predict(pcr.fit,College[test,], ncomp = i )-College[test,]$Apps)^2)
+}
+
+mse_pcr_comps
+```
+
+```{r}
+pcr.pred=predict(pcr.fit,College[test,],ncomp=16)
+mean((pcr.pred-y.test)^2)
+```
+
+```{r}
+pls.fit=plsr(Apps~., data= College[train,], scale = TRUE, validation="CV" )
+summary(pls.fit)
+```
+
+```{r}
+xcol<-1:17
+
+mse_pls_comps<-numeric(length = length(xcol))
+
+for (i in 1:length(xcol))
+  { 
+    mse_pls_comps[i]<-mean(
+        (predict(pls.fit,College[test,], ncomp = i )-College[test,]$Apps)^2)
+}
+
+mse_pls_comps
+```
+
+```{r}
+pls.pred=predict(pls.fit,College[test,],ncomp=8)
+mean((pls.pred-y.test)^2)
+```
+G.Linear performed the best but PLS was within a hair of it.
+
+
+11.
+
+
+```{r}
+library(MASS)
+```
+
+```{r}
+set.seed(1)
+
+
+train <- sample (c(TRUE , FALSE), nrow (Boston),
+replace = TRUE)
+test <- (!train)
+
+btrain <-Boston[train,]
+btest <- Boston[test,]
+
+y.test=y[test]
+```
+
+```{r}
+linear <- lm(crim~., data = btrain)
+
+boston_pred <- predict(linear, btest)
+mean((boston_pred - btest$crim)^2)
+```
+
+```{r}
+forward <- regsubsets(crim~., data = btrain, nvmax = 13, method = "forward")
+forward_summary <- summary(forward)
+```
+
+```{r}
+plot(forward, scale = "adjr2")
+```
+
+
+It seems that around 7 predictors is where the optimal model would be found.
+
+RIDGE
+```{r}
+train.x<-model.matrix(crim~.,data=btrain)
+train.y<-btrain$crim
+
+test.x<-model.matrix(crim~.,data=btest)
+test.y<-btest$crim
+
+ridge.fit<-cv.glmnet(train.x,train.y, alpha = 0)
+
+ridge<- ridge.fit$lambda.min
+ridge
+```
+
+```{r}
+ridge.pred<-predict(ridge.fit, s=ridge, newx=test.x)
+
+mean((ridge.pred-test.y)^2)
+```
+
+LASSO
+
+```{r}
+lasso.fit<-cv.glmnet(train.x,train.y, alpha = 1)
+
+lasso<- lasso.fit$lambda.min
+lasso
+```
+
+```{r}
+lasso.pred<-predict(lasso.fit, s=lasso, newx=test.x)
+mean((lasso.pred-test.y)^2)
+```
+```{r}
+pcr.fit=pcr(crim~., data= btrain, scale = TRUE, validation="CV" )
+summary(pcr.fit)
+```
+```{r}
+
+xcol<-1:13
+mse_pcr_comps<-numeric(length = length(xcol))
+
+for (i in 1:length(xcol))
+  { 
+    mse_pcr_comps[i]<-mean((predict(pcr.fit, btest, ncomp = i )-btest$crim)^2)
+    }
+
+mse_pcr<-as.data.frame(cbind(ncomps = c(1:13), mse = as.numeric(mse_pcr_comps)))
+
+mse_pcr
+```
+
+
+
+B. it seems pcr with ncomp = 13 has the lowest mean squared error.
+
+C. yes the mode has all the features since it resulted in the lowest
+mean squared error.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

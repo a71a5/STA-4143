@@ -1,0 +1,254 @@
+---
+title: "Assignment 4"
+author: "Sai Ananthula - emw832"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+3a.  k-fold cross-validation is implemented by first choosing a number K of folds
+to generate out of a data set. Each fold is a unique subset of the data set. If
+k = 5 then 5 folds are created and 1 is used as the test data and the rest for
+training the model. The fold left out is used to calculate Mean Squared Error
+and then the process is repeated with each fold being left out once. Then 
+after that, K MSE's are averaged to determine approximate MSE for the model. 
+
+3b1. The validation set approach compared to k-fold cross validation has a huge
+flaw in terms of variance. Due to the the data being split in half which 
+observations are in the training vs test data can result in an inaccurate MSE. 
+However, it is faster than k-fold since it only has to be ran one time.
+  
+3b2.The LOOCV also has significantly higher variance than k-fold since the 
+training data sets are highly correlated since only 1 observation is removed. 
+This results in more variance than k-fold since the folds in k-fold are less 
+correlated since there are more of them.
+
+```{r}
+library(ISLR2)
+```
+
+
+
+5.
+
+```{r}
+set.seed(715)
+log.fit <- glm(default ~ income + balance, data = Default, family = "binomial")
+summary(log.fit)
+```
+
+```{r}
+dim(Default)
+```
+```{r}
+train <- sample(10000,5000)
+
+```
+
+
+```{r}
+log.fit <- glm(default ~ income + balance, data = Default, family = "binomial",subset = train)
+summary(log.fit)
+```
+```{r}
+probs <- predict(log.fit, newdata = Default[-train,],type = "response")
+pred <- rep("No",length(probs))
+pred[probs > 0.5] <-"Yes"
+mean(pred != Default[-train, ]$default)
+```
+```{r}
+log.fit <- glm(default ~ income + balance, data = Default, family = "binomial",subset = train)
+probs <- predict(log.fit, newdata = Default[-train,],type = "response")
+pred <- rep("No",length(probs))
+pred[probs > 0.5] <-"Yes"
+mean(pred != Default[-train, ]$default)
+```
+
+```{r}
+log.fit <- glm(default ~ income + balance, data = Default, family = "binomial",subset = train)
+probs <- predict(log.fit, newdata = Default[-train,],type = "response")
+pred <- rep("No",length(probs))
+pred[probs > 0.5] <-"Yes"
+mean(pred != Default[-train, ]$default)
+```
+
+```{r}
+log.fit <- glm(default ~ income + balance, data = Default, family = "binomial",subset = train)
+probs <- predict(log.fit, newdata = Default[-train,],type = "response")
+pred <- rep("No",length(probs))
+pred[probs > 0.5] <-"Yes"
+mean(pred != Default[-train, ]$default)
+```
+
+5c. The rate seems to be the same but it is probably off by a little between 
+each run but r's internal rounding is not showing it. 
+
+
+```{r}
+log.fit <- glm(default ~ income + balance + student, data = Default, family = "binomial",subset = train)
+probs <- predict(log.fit, newdata = Default[-train,],type = "response")
+pred <- rep("No",length(probs))
+pred[probs > 0.5] <-"Yes"
+mean(pred != Default[-train, ]$default)
+```
+5d. The dummy variable for student had near zero influence of MSE. It seems to not be 
+relevant in this. 
+
+
+6.
+
+```{r}
+set.seed(715 )
+log.fit <- glm(default ~ income + balance, data = Default, family = "binomial")
+summary(log.fit)
+```
+```{r}
+boot.fn <- function(data,index)
+{
+  log.fit2 <- glm(default ~ income + balance, data = data, family = "binomial", subset = index)
+  return(coef(log.fit2))
+}
+```
+
+```{r}
+library(boot)
+boot(Default, boot.fn, 1000)
+```
+
+
+6d. The standard error calculated by both methods are decently close.
+
+
+9.
+
+```{r}
+library(MASS)
+```
+
+```{r}
+attach(Boston)
+```
+
+```{r}
+pop.mean <- mean(medv)
+pop.mean
+```
+
+
+```{r}
+pop.se <- sd(medv) / sqrt(dim(Boston)[1])
+pop.se
+```
+
+```{r}
+set.seed(715)
+boot.fn <- function(data,index)
+{
+   se <- mean(data[index])
+   return(se)
+}
+```
+
+
+```{r}
+boot(medv, boot.fn, 1000)
+```
+
+9c. The error from the bootstrap of .395 is very close to the estimate of 
+.4088 .
+
+
+```{r}
+t.test(medv)
+```
+```{r}
+con_int <- c(22.53 - 2 * .395, 22.52 + 2 * .395)
+con_int
+```
+
+The bootstrap confidence interval is very close to onc calculated by the t.test
+function. 
+
+
+```{r}
+pop.med <- median(medv)
+pop.med
+```
+
+```{r}
+
+boot.fn <- function(data, index) 
+{
+    med <- median(data[index])
+    return (med)
+}
+
+boot(medv, boot.fn, 1000)
+```
+The bootstrap calculated value is the same as the one calculated using the 
+median function. It also has a low small error of .372.
+
+
+```{r}
+ten <- quantile(medv, c(0.1))
+ten 
+```
+```{r}
+boot.fn <- function(data, index)
+{
+    tenb <- quantile(data[index], c(0.1))
+    return (tenb)
+}
+boot(medv, boot.fn, 1000)
+```
+
+
+The estimate for the 10th percentile is the same for both methods sine it is 
+12.75. The std error is also small since it is .498 which is small compared
+to the standrd error. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

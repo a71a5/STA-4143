@@ -1,0 +1,70 @@
+---
+title: "Problem 2.8"
+author: "Sai Ananthula - emw832"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r}
+  college <- read.csv("College.csv")
+  View(college)
+  head(college)
+```
+
+```{r}
+  rownames(college) <- college[, 1]
+  View(college)
+```
+
+```{r}
+  college <- college[, -1]
+  View(college)
+```
+
+```{r}
+  summary(college)
+```
+
+```{r}
+  college[,1] <- as.numeric(factor(college[,1]))
+  pairs(college[,1:10])
+```
+
+```{r}
+  boxplot(college[,"Outstate"], college[,"Private"],
+          names = c("Outstate", "Private"))
+```
+
+```{r}
+  Elite <- rep ("No", nrow (college))
+  Elite[college$Top10perc > 50] <- " Yes "
+  Elite <- as.factor (Elite)
+  college <- data.frame (college , Elite)
+  summary(college)
+
+```
+
+```{r}
+  boxplot(college[,"Outstate"], college[,"Elite"],
+          names = c("Outstate", "Elite"))
+```
+
+```{r}
+  hist(college[,"Outstate"],main = "Out of State Students", xlab = "Number of Out of State Students")
+  hist(college[,"Top10perc"],main = "Top10Perc", xlab = "Number of Top 10% Students",breaks = 20)
+  hist(college[,"S.F.Ratio"],main = "Student:Faculty Ratio", xlab = "Student:Faculty Ratio at College",breaks = 6)
+```
+
+```{r}
+  relation <- lm(college[,"Grad.Rate"]~college[,"Top10perc"])
+  summary(relation)
+```
+
+```{r}
+plot(college[,"Grad.Rate"],college[,"Top10perc"])
+```
+There seems to be a strong correlation between the number of 10 percent students who go to any given college
+and the graduation rate. This is justified by the p-value having 16 0's in front of it (calculated using the linear regression function). Using this information from the 
+test data it would be rather easy to predict the graduation rate at a university given the number of students who attend said
+college that were in the top 10% of their high school's graduating class. 

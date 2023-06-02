@@ -1,0 +1,319 @@
+---
+title: "AS8"
+author: "Sai Ananthula"
+date: "2023-04-10"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(e1071)
+```
+
+## 5
+
+5a
+```{r}
+x1 <- runif (500) - 0.5
+x2 <- runif (500) - 0.5
+y <- 1 * (x1^2 - x2^2 > 0)
+```
+
+5b
+```{r}
+data = data.frame(x1 = x1, x2 = x2, y = as.factor(y))
+
+ggplot(data, aes(x1,x2,color = y)) +
+  geom_point()
+```
+
+```{r}
+
+log <- glm(y~., data= data, family = binomial)
+
+summary(log)
+```
+No predictors are significant.
+
+```{r}
+probs <- predict(log, data = data, type = "response")
+preds <- ifelse(probs > 0.5, 1, 0)
+
+
+data.neg = data[preds==0,]
+data.pos = data[preds==1,]
+
+plot(data.pos$x1, data.pos$x2, col=("blue"))
+ points(data.neg$x1, data.neg$x2, col=("red"))
+ 
+
+```
+
+The decision boundary is linear.
+
+
+```{r}
+log2 <- glm(y ~ poly(x1,2) + poly(x2,2), data= data, family = binomial)
+
+summary(log2)
+```
+No predictors are statistically significant. 
+
+
+```{r}
+probs2 <- predict(log2, data = data, family = binomial)
+preds2 <- ifelse(probs2 > 0.5, 1, 0)
+
+
+data.neg2 = data[preds2==0,]
+data.pos2 = data[preds2==1,]
+
+plot(data.pos2$x1, data.pos2$x2, col=("blue"))
+ points(data.neg2$x1, data.neg2$x2, col=("red"))
+```
+
+The decision boundary is no obviously non-linear. 
+
+5g.
+```{r}
+svm_model <- svm(y ~ x1 + x2, data, kernel = "linear", cost = 0.01)
+
+preds3 <- predict(svm_model, data)
+
+data2.neg = data[preds3==0,]
+data2.pos = data[preds3==1,]
+
+plot(data2.pos$x1, data2.pos$x2, col = ("blue"))
+points(data2.neg$x1, data2.neg$x2, col = ("red"))
+```
+5h.
+```{r}
+radial <- svm(y ~ x1 + x2, data = data, kernel = "radial")
+radial_preds = predict(radial, data)
+
+data3.neg = data[radial_preds==0,]
+data3.pos = data[radial_preds ==1,]
+
+plot(data3.pos$x1, data3.pos$x2, col = ("blue"))
+points(data3.neg$x1, data3.neg$x2, col = ("red"))
+
+```
+5i. The radial svm is very similar to the true decision boundary due to its non-linearity.
+
+
+## 7
+
+```{r}
+library(ISLR2)
+```
+
+a.
+```{r}
+gas_bin <- ifelse(Auto$mpg > median(Auto$mpg), 1, 0)
+
+Auto$mpg_tier <- as.factor(gas_bin)
+
+```
+
+b.
+```{r}
+set.seed(715)
+svm_model <- tune(svm, mpg_tier ~ ., data = Auto, kernel = "linear",
+                 ranges = list(cost = c(0.01, 0.1, 1, 10, 100,1000)))
+
+summary(svm_model)
+```
+
+A cost of 0 seems to have the best performance.
+
+
+```{r}
+
+radial_Auto <- tune(svm, mpg_tier ~ ., data = Auto, kernel = "radial",
+                 ranges = list(cost = c(0.01, 0.1, 1, 10, 100,1000),
+                               gamma = c(0.001, 0.01, 0.1, 1, 10)))
+
+poly_Auto <- tune(svm, mpg_tier ~ ., data = Auto, kernel = "polynomial",
+                 ranges = list(cost = c(0.01, 0.1, 1, 10, 100,1000),
+                               degree = c(2, 3, 4, 5)))
+```
+
+```{r}
+radial_Auto$performances[which.min(radial_Auto$performances$error),]
+```
+For radial it seems the best gamma/cost combinations is gamma = 0.001 and cost = 100.
+
+```{r}
+poly_Auto$performances[which.min(poly_Auto$performances$error),]
+```
+
+For poly it seems the best degree/cost combination is degree = 2 and cost = 1000.
+
+```{r}
+
+plot(svm_model$best.model, Auto, weight ~ year)
+```
+
+```{r}
+plot(radial_Auto$best.model, Auto, displacement ~ year)
+
+```
+```{r}
+plot(poly_Auto$best.model, Auto, horsepower ~ weight)
+```
+
+## 8
+
+a.
+```{r}
+set.seed(715)
+
+index <- sample(nrow(OJ), 800)
+
+train_oj <- OJ[index,]
+test_oj <- OJ[-index,]
+```
+
+b.
+```{r}
+
+oj_model_1 <- svm(Purchase ~., data= train_oj, kernel = "linear", cost = 0.01)
+summary(oj_model_1)
+```
+The linear model uses 437 support vectors which are nearly divided exactly in half. This
+seems like a large number of support vectors due to the face the training data only contains 800
+data points. 
+
+c.
+```{r}
+train_preds <- predict(oj_model_1, train_oj)
+test_preds <- predict(oj_model_1, test_oj)
+
+table(predictions = train_preds, train_response = train_oj$Purchase)
+table(predictions = test_preds, train_response = test_oj$Purchase)
+```
+Training Error Rate = 135 / 800 = 0.16875 or 16.875%.
+
+Test Error Rate = 45 / 270 = 0.16875 or 16.875%
+
+d.
+
+```{r}
+set.seed(715)
+
+oj_linear<- tune(svm, Purchase ~ ., data = train_oj, kernel = "linear",
+                 ranges = list(cost = c(0.01, 0.1, 1, 10)))
+
+oj_linear$performances[which.min(oj_linear$performances$error),]
+```
+
+
+A cost of 10 gave the lowest error value.
+
+e.
+
+```{r}
+oj_linear_tuned <- svm(Purchase ~., data= train_oj, kernel = "linear", cost = 10)
+
+train_preds <- predict(oj_linear_tuned, train_oj)
+test_preds <- predict(oj_linear_tuned, test_oj)
+
+table(predictions = train_preds, train_response = train_oj$Purchase)
+table(predictions = test_preds, train_response = test_oj$Purchase)
+```
+Training Error Rate: 127 / 800 = 0.15875 or 15.875%
+
+Test Error Rate: 44 / 270 = 0.16296 or 16.296% 
+
+
+f. RADIAL
+
+```{r}
+oj_radial <- svm(Purchase ~., data= train_oj, kernel = "radial", cost = 0.01)
+summary(oj_radial)
+```
+The radial model uses 639 support vectors which is a significant increase from the linear model.
+
+
+```{r}
+train_preds <- predict(oj_radial, train_oj)
+test_preds <- predict(oj_radial, test_oj)
+
+table(predictions = train_preds, train_response = train_oj$Purchase)
+table(predictions = test_preds, train_response = test_oj$Purchase)
+```
+
+Training Error Rate: 123 / 800 = 0.15375 or 15.375%
+Test Error Rate:  44 / 270 = 0.16296 or 16.296% 
+
+
+```{r}
+set.seed(715)
+
+oj_radial<- tune(svm, Purchase ~ ., data = train_oj, kernel = "radial",
+                 ranges = list(cost = c(0.01, 0.1, 1, 10)))
+
+oj_radial$performances[which.min(oj_radial$performances$error),]
+```
+The optimal cost is 1.
+
+
+```{r}
+oj_radial_tuned <- svm(Purchase ~., data= train_oj, kernel = "radial", cost = 1)
+
+train_preds <- predict(oj_radial_tuned, train_oj)
+test_preds <- predict(oj_radial_tuned, test_oj)
+
+table(predictions = train_preds, train_response = train_oj$Purchase)
+table(predictions = test_preds, train_response = test_oj$Purchase)
+```
+Training Error Rate: 123 / 800 = 0.15375 or 15.375%
+Test Error Rate:  44 / 270 = 0.16296 or 16.296% 
+
+g.
+
+```{r}
+oj_poly <- svm(Purchase ~., data= train_oj, kernel = "polynomial", cost = 0.01, degree = 2)
+summary(oj_poly)
+```
+The polynomial uses 642 support vectors which is a significant increase from the linear model.
+
+```{r}
+
+train_preds <- predict(oj_poly, train_oj)
+test_preds <- predict(oj_poly, test_oj)
+
+table(predictions = train_preds, train_response = train_oj$Purchase)
+table(predictions = test_preds, train_response = test_oj$Purchase)
+
+```
+Training Error Rate: 307 / 800 = .38375 or 38.375%
+Test Error Rate: 93 / 270 = .34444 or 34.444% 
+
+```{r}
+set.seed(715)
+
+oj_poly_2<- tune(svm, Purchase ~ ., data = train_oj, kernel = "polynomial", degree = 2,
+                 ranges = list(cost = c(0.01, 0.1, 1, 10)))
+
+oj_poly_2$performances[which.min(oj_poly_2$performances$error),]
+```
+
+The optimal cost for lower error is 10. 
+
+```{r}
+
+oj_poly_tuned <- svm(Purchase ~., data= train_oj, kernel = "polynomial",degree =2 , cost = 10)
+
+train_preds <- predict(oj_poly_tuned, train_oj)
+test_preds <- predict(oj_poly_tuned, test_oj)
+
+table(predictions = train_preds, train_response = train_oj$Purchase)
+table(predictions = test_preds, train_response = test_oj$Purchase)
+```
+Training Error Rate: 123 / 800 = 0.15375 or 15.375%
+Test Error Rate: 48 / 270 = 0.17778 or 17.778%
+
+h
+
+The best performing model considering test error rate is a two-way tie between a standard linear svm and radial both with a test error rate of 16.296%.

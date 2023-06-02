@@ -1,0 +1,375 @@
+---
+title: "Assignment 3"
+author: "Sai Ananthula"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r}
+library(ISLR)
+library(MASS)
+library(e1071)
+library(class)
+library(tidyverse)
+```
+13.
+```{r}
+pairs(Weekly)
+```
+13a. Volume and Year have some correlation
+
+```{r}
+attach(Weekly)
+logWeek.fits <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, data = Weekly, family = binomial)
+summary(logWeek.fits)
+```
+
+13b. Prdictors Lag2 and Lag1 are possibiliy significant.
+
+```{r}
+logWeekprob = predict(logWeek.fits, type = "response")
+logWeekpred = rep("Down", length(logWeekprob))
+logWeekpred[logWeekprob > .5] <- "Up"
+table(logWeekpred,Direction)
+mean(logWeekpred == Direction)
+```
+
+13c. The Model is 56% accurate in response prediciton. It is signficantly more
+accurate predicitng when the market goes up rather than down.
+Accuracy for Down  is around 11% while for up its 92% accurate.
+
+13d.
+
+```{r}
+train <- (Year < 2009)
+Weekly_train <- Weekly[train,]
+Weekly_test <- Weekly[!train,]
+Direction_train <- Direction
+Direction_test <- Direction
+```
+
+
+```{r}
+logWeek2.fits <- glm(Direction ~ Lag2, data = Weekly_train, family = binomial, )
+summary(logWeek2.fits)
+```
+```{r}
+logWeekprob2 <- predict(logWeek2.fits, Weekly_test, type = "response")
+logPred = rep("Down", length(Direction_test))
+logPred[logWeekprob2 > .5] <- "Up"
+table(logPred, Direction_test)
+mean(logPred == Direction[!train])
+```
+
+```{r}
+ldafit <- lda(Direction ~ Lag2, data = Weekly, subset = train)
+
+ldapred = predict(ldafit,Weekly[!train,])
+
+ldaclass = ldapred$class
+table(ldaclass,Direction[!train])
+mean(ldaclass == Direction[!train])
+```
+```{r}
+qdafit = qda(Direction~Lag2,subset=train)
+qdapred = predict(qdafit,Weekly[!train,])
+qdaclass = qdapred$class
+table(qdaclass,Direction[!train])
+mean(qdaclass==Direction[!train])
+```
+
+```{r}
+
+set.seed(1)
+
+train.X = matrix(Lag2[train]) 
+test.X = matrix(Lag2[!train]) 
+
+train.Direction = Direction[train]
+
+knn.pred = knn(train.X,test.X,train.Direction,k=1)
+
+table(knn.pred,Direction[!train])
+mean(knn.pred==Direction[!train])
+```
+
+```{r}
+nb.fit <- naiveBayes (Direction ∼ + Lag2 , data = Weekly_train)
+nb.fit
+nb.class <- predict (nb.fit ,Weekly_test)
+mean(nb.class == Direction[!train])
+
+```
+
+
+13i. LDA and Log Regression were the most accurate
+
+
+
+```{r}
+
+set.seed(1)
+
+train.X = matrix(Lag2[train]) 
+test.X = matrix(Lag2[!train]) 
+
+train.Direction = Direction[train]
+
+knn.pred = knn(train.X,test.X,train.Direction,k=3)
+
+table(knn.pred,Direction[!train])
+mean(knn.pred==Direction[!train])
+```
+13j. Nothing seemed to improve results
+
+14.
+
+```{r}
+  Auto <- as_tibble(ISLR::Auto)
+  Auto01 <- Auto %>% 
+    mutate(mpg01 = ifelse(mpg > median(mpg), 1, 0))
+  cor(Auto01[,-9])
+  pairs(Auto01)
+```
+
+```{r}
+train <- (Auto01$year %% 2 == 0)
+Auto.train <- Auto01[train,]
+Auto.test <- Auto01[!train,]
+```
+
+
+14d.
+
+LDA
+```{r}
+lda_auto <- lda(mpg01 ~ cylinders + displacement + horsepower + weight, 
+                data = Auto01,
+                subset = train)
+
+lda_auto_pred <- predict(lda_auto, Auto.test)
+table(lda_auto_pred$class, Auto.test$mpg01)
+mean(lda_auto_pred$class != Auto.test$mpg01)
+```
+The test error is 12.67%.
+
+14e.
+
+QDA
+```{r}
+
+qda_auto <- qda(mpg01 ~ cylinders + displacement + horsepower + weight, data = Auto01,subset = train)
+
+qda_auto_pred <- predict(qda_auto, Auto.test)
+table(qda_auto_pred$class, Auto.test$mpg01)
+mean(qda_auto_pred$class != Auto.test$mpg01)
+
+
+```
+
+The test error is 10.99%.
+
+
+Logistic
+```{r}
+logistic_auto <- glm(mpg01 ~ cylinders + displacement + horsepower + weight, data = Auto01, subset = train,
+                     family = binomial)
+
+
+logistic_probs_auto <- predict(logistic_auto, Auto.test, type = "response")
+logistic_pred_auto <- rep(0,length(Auto.test$mpg01))
+logistic_pred_auto[logistic_probs_auto > 0.5] <- 1
+
+table(logistic_pred_auto, Auto.test$mpg01)
+mean(logistic_pred_auto == Auto.test$mpg01)
+```
+The test error is 12.09%.
+
+
+Naive Bayes
+```{r}
+nb.fit <- naiveBayes(mpg01 ~ cylinders + weight + displacement + horsepower, family = binomial, data = Auto01, subset=train)
+
+nb.fit
+nb.class <- predict (nb.fit ,Auto.test)
+mean(nb.class != Auto.test$mpg01)
+```
+The test error is 12.64%.
+
+
+KNN | k = 1
+
+```{r}
+train_auto_X <- cbind(Auto01$cylinders, Auto01$displacement, Auto01$horsepower,Auto01$weight
+)[train,]
+
+test_auto_X <- cbind(Auto01$cylinders, Auto01$displacement, Auto01$horsepower,Auto01$weight
+)[!train,]
+
+set.seed(1)
+knn_auto <- knn(train_auto_X, test_auto_X, Auto.train$mpg01, k = 1)
+table(knn_auto, Auto.test$mpg01)
+mean(knn_auto != Auto.test$mpg01)
+```
+
+The test error for KNN with K=1 neighbors is 15.38%
+
+
+
+
+KNN | k = 3
+```{r}
+train_auto_X <- cbind(
+  Auto$cylinders, 
+  Auto$displacement, 
+  Auto$horsepower,
+  Auto$weight
+)[train,]
+
+test_auto_X <- cbind(
+  Auto$cylinders, 
+  Auto$displacement, 
+  Auto$horsepower,
+  Auto$weight
+)[!train,]
+
+set.seed(1)
+knn_auto3 <- knn(train_auto_X, test_auto_X, Auto.train$mpg01, k = 3)
+table(knn_auto3, Auto.test$mpg01)
+mean(knn_auto3 != Auto.test$mpg01)
+```
+
+The test error for KNN with K=3 neighbors is 13.74%
+
+
+
+KNN | k = 10
+```{r}
+train_auto_X <- cbind(
+  Auto$cylinders, 
+  Auto$displacement, 
+  Auto$horsepower,
+  Auto$weight
+)[train,]
+
+test_auto_X <- cbind(
+  Auto$cylinders, 
+  Auto$displacement, 
+  Auto$horsepower,
+  Auto$weight
+)[!train,]
+
+set.seed(1)
+knn_auto10 <- knn(train_auto_X, test_auto_X, Auto.train$mpg01, k = 10)
+table(knn_auto10, Auto.test$mpg01)
+mean(knn_auto10 != Auto.test$mpg01)
+```
+
+The test error for KNN with K=10 neighbors is 15.38%
+
+
+K = 3 seems to be optimal.
+
+
+16. 
+
+```{r}
+Boston$crim01 <- as.numeric(Boston$crim > median(Boston$crim))
+pairs(Boston)
+```
+```{r}
+
+
+set.seed(42)
+
+rands <- rnorm(nrow(Boston))
+
+test <- rands > quantile(rands,0.75)
+train <- !test
+
+Boston_train <- Boston[train,]
+Boston_test <- Boston[test,]
+Boston_train_ft <- Boston_train
+Boston_train_ft$crim01 <- factor(Boston_train_ft$crim01)
+```
+
+```{r}
+log = glm(crim01~lstat+rm+zn+nox+dis+rad+ptratio+black+medv+age+chas+indus+tax, data=Boston_train)
+summary(log)
+
+log.probs=predict(log,Boston_test,type="response")
+log.pred=rep(0,nrow(Boston_test))
+log.pred[log.probs > 0.50]=1
+table(log.pred,Boston_test$crim01)
+mean(log.pred==Boston_test$crim01)
+```
+
+Looks Like nox rad, medv, and age are the most significant predictors.
+
+```{r}
+log = glm(crim01~nox+rad+medv+age, data=Boston_train, family = binomial())
+
+log.probs=predict(log,Boston_test,type="response")
+log.pred=rep(0,nrow(Boston_test))
+log.pred[log.probs > 0.50]=1
+table(log.pred,Boston_test$crim01)
+mean(log.pred != Boston_test$crim01)
+```
+Error rate is about 12.6% for log regression.
+
+
+```{r}
+lda.fit = lda(crim01~nox+rad+medv+age, data=Boston_train)
+
+lda.pred=predict(lda.fit,Boston_test)$class
+table(lda.pred,Boston_test$crim01)
+mean(lda.pred!=Boston_test$crim01)
+```
+
+Error rate is about 12.6% for LDA.
+
+```{r}
+set.seed(10)
+
+train_Boston = Boston_train[,c("nox","rad","medv","age","tax","ptratio")]
+test_Boston =  Boston_test[,c("nox","rad","medv","age","tax","ptratio")]
+knn.pred=knn(train_Boston,test_Boston,Boston_train$crim01,k=1)
+table(knn.pred,Boston_test$crim01)
+mean(knn.pred!=Boston_test$crim01)
+```
+Error Rate for KNN with k = 1 is 11.02%.
+
+```{r}
+set.seed(10)
+
+train_Boston = Boston_train[,c("nox","rad","medv","age","tax","ptratio")]
+test_Boston =  Boston_test[,c("nox","rad","medv","age","tax","ptratio")]
+knn.pred=knn(train_Boston,test_Boston,Boston_train$crim01,k=10)
+table(knn.pred,Boston_test$crim01)
+mean(knn.pred!=Boston_test$crim01)
+```
+Error Rate for KNN with k = 10 is 14.17%.
+
+```{r}
+set.seed(10)
+
+train_Boston = Boston_train[,c("nox","rad","medv","age","tax","ptratio")]
+test_Boston =  Boston_test[,c("nox","rad","medv","age","tax","ptratio")]
+knn.pred=knn(train_Boston,test_Boston,Boston_train$crim01,k=25)
+table(knn.pred,Boston_test$crim01)
+mean(knn.pred!=Boston_test$crim01)
+```
+Error Rate for KNN with k = 25 is 19.69%.
+
+```{r}
+nb_boston <- naiveBayes(crim01~nox+rad+medv+age, data=Boston, subset = train)
+nbb.class <- predict (nb_boston,Boston_test)
+mean(nbb.class != Boston_test$crim01)
+```
+
+Error Rate for Naive Bayes is 12.6%
+
+
+The Best performer is KNN when K = 1 since the error rate os 11.02%

@@ -1,0 +1,319 @@
+---
+title: "Direct Mail Fundrasing"
+author: "Sai Ananthula"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+***
+# Documentation is at end
+***
+
+## Step 1: Partioning 
+I used cross validation to estimate out of sample error with seed set to 12345.
+
+
+### Attaching needed libraries
+```{r}
+library(tidyverse)
+library(tree)
+library(randomForest)
+library(gbm)
+library(caret)
+library(splines)
+library(corrplot)
+library(kernlab)
+```
+### Importing Data
+```{r}
+
+train <-  read_rds("fundraising.rds")
+
+test <- read_rds("future_fundraising.rds")
+
+```
+
+***
+
+## Step 2: Model Building
+
+### Importance table
+I used the importance table from a model developed using bagging to explore which predictor variables are or are not relevant
+```{r}
+
+
+bagged_model <- randomForest(y = train$target, x = train[,1:20], importance = T)
+
+importance(bagged_model)
+
+
+```
+
+Based off a bagged random tree model's importance ranking the most important predictors
+in decreasing order are: largest_gift, avg_gift, last_gift, num_child,pct_lt15k, months_since_donate.
+
+***
+
+### Data Transformation & Subseting
+
+However, further exploration is possible starting with stripping non-numeric columns from the dataset (see below). The homeowner and female columns will also be converted to numeric columns.
+
+```{r}
+train <- train[,5:21]
+test <- test[,5:20]
+
+train <- train %>%
+  mutate(homeowner = as.numeric(homeowner)) %>%
+  mutate(female = as.numeric(female))
+
+
+str(train)
+```
+***
+
+### Correlation Table
+
+This table contains the correlation values from 1 (strong positive correlation) to -1 (strong negative correlation) for all pairs of numeric 
+columns in the data set. 
+```{r}
+cor(train[1:16])
+```
+The raw numbers representing correlation are a little hard to understand so the correlation plots below were built to see which predictors might be collinear. 
+
+***
+
+### Correlation Plots
+The 2 plots below are graphical representations of the correlation table above. The first table has just colored squares assigned a color on a scale from  blue to red mirroring
+the 1 to -1 correlation scale. The second has the same color scheme but also features a truncated version of each correlation number. 
+```{r}
+corrplot(cor(train[1:16]),diag= FALSE, method = "color", type = "lower")
+corrplot(cor(train[1:16]),diag= FALSE, method = "number", type = "lower")
+```
+
+Strong Correlations: absolute value(corr) > .7
+home_value
+avg_fam_inc
+med_fam_inc
+pct_lt15k
+last_gift
+avg_gift
+
+There is also a high likelihood avg_fam_inc and median_fam_inc are collinear due their correlation value is .98.
+
+
+Based on the variables from the importance: largest_gift, avg_gift, last_gift, num_child, and pct_lt15k, months_since_donate.
+
+I combined the two sets of variables since there is a lot of overlap but decided to exclude num_child since according to the correlation plot it has a low absolute correlation value. Home value which was not initially identified in the correlation plot but in the importance data will be included since there is some evidence of correlation and it did have a decent meandecreaseaccuracy.
+
+
+***
+
+#### Predictors Used For Model Building: largest_gift, home_value, avg_fam_in, med_fam_inc, pct_lt15k, last_gift, avg_gift, and months_since_donate. 
+
+
+### Random Forest
+
+Originally it was used to figure what predictors would be useful so the model was re-run but with a limited set of predictors. 
+```{r}
+
+cv_train <- trainControl(method="repeatedcv", number=5, repeats=3)
+
+set.seed(12345)
+
+randomForest <- train(target ~ home_value + avg_fam_inc + med_fam_inc + pct_lt15k
+                           +last_gift + avg_gift + largest_gift +  months_since_donate , data = train, trControl = cv_train, 
+                           method = "rf")
+
+randomForest
+```
+
+The random forest resulted in an accuracy of 0.5301 or 53.01%
+
+***
+
+### SVM-Radial
+
+A radial SVM was among the three types of SVM's I tested since one type may have an advantage over the others.  
+
+```{r}
+
+set.seed(12345)
+
+svm_Radial <- train(target ~ home_value + avg_fam_inc + med_fam_inc + pct_lt15k
+                           +last_gift + avg_gift+ largest_gift +  months_since_donate, data = train, trControl = cv_train, 
+                           method = "svmRadial")
+
+svm_Radial
+```
+
+The radial SVM resulted in an accuracy of 0.5518 or 55.18%
+
+***
+
+### SVM-Poly
+
+I also decided to test a polynomial variation of a SVM to see if it would perform better.
+
+```{r}
+
+set.seed(12345)
+
+svm_Poly<- train(target ~ home_value + avg_fam_inc + med_fam_inc + pct_lt15k
+                           +last_gift + avg_gift + largest_gift +  months_since_donate , data = train, trControl = cv_train, 
+                           method = "svmPoly")
+
+svm_Poly
+```
+The polynomial SVM resulted in an accuracy of 0.5583 or 55.83%
+
+***
+
+### SVM-Linear
+
+I also decided to test a linear variation of a SVM to see if it would perform better.
+
+```{r}
+
+set.seed(12345)
+
+svm_Linear<- train(target ~ home_value + avg_fam_inc + med_fam_inc + pct_lt15k
+                           +last_gift + avg_gift + largest_gift +  months_since_donate, data = train, trControl = cv_train, 
+                           method = "svmLinear")
+
+svm_Linear
+```
+The polynomial SVM resulted in an accuracy of 0.5451 or 54.51%
+
+***
+
+### Generalized Linear Model
+
+I also decided to see if a generalized linear model since it seems there is a non-linear relationship in effect. 
+```{r}
+
+set.seed(12345)
+
+glm_model<- train(target ~ home_value + avg_fam_inc + med_fam_inc + pct_lt15k
+                           +last_gift + avg_gift + largest_gift +  months_since_donate , data = train, trControl = cv_train, 
+                           method = "glm")
+
+glm_model
+```
+The GLM resulted in an accuracy of 0.5482 or 54.82%
+
+### Linear Discriminant Analyis
+
+Since this is classification a linear discriminant approach could be effective. 
+```{r}
+
+set.seed(12345)
+
+lda_model<- train(target ~ home_value + avg_fam_inc + med_fam_inc + pct_lt15k
+                           +last_gift + avg_gift + largest_gift +  months_since_donate, data = train, trControl = cv_train, 
+                           method = "lda")
+
+lda_model
+```
+The LDA resulted in an accuracy of 0.5471 or 54.71%
+
+ ***
+ 
+## Step 3: Testing
+SVM-Poly was the most accurate with an accuracy of 0.5583 or 55.83%
+
+```{r}
+set.seed(12345)
+
+svm_Poly_Preds <- predict(svm_Poly, newdata = test)
+svm_Poly_Preds <- data.frame(svm_Poly_Preds)
+write.csv(svm_Poly_Preds, file = "target.csv", row.names = FALSE)
+```
+
+# Documentation
+
+***
+
+### Business Objectives and Goals
+A national veterans organizations wants to increase the effectiveness of their direct-mail campaign. Currently they have a response rate of 5.1% and the average donation is 13USD but that does not account for the cost of each letter which is .68USD. The goals of this analysis is to improve that rate by analyzing a sample of data from their larger data set and look for variables that might influence someone's decision to donate. By isolating these variables and building a classification model the organization should be able to raise more money whilst spending less money on mass mailing. 
+
+***
+
+### Data Sources and Data
+
+The data is originally sourced from the organization's internal database which has the information of over 13 million donors. The sample provided has 3,000 records but is split into 2 files for training and then testing. The original sample provided was weighted so non-donors are underrepresented due to high amount of them in the original data source. 
+
+***
+
+### Type of Analyis
+
+The initial analysis step was building a model using bagging since it would tell me which predictor variables were useful for further analysis and which ones were not. Due to this all the zip convert variables were removed from the data set. 
+
+A correlation table was then generated to see which predictors variables had some form of correlation with each other regardless if the correlation is positive or negative. The table was not extremely useful due to low-readability so it was then processed into 2 correlation plots that provide a superior graphical representation of the correlation between predictor variables in the data. The first correlation plot is just colored squares colored on a scale from red to blue with red = -1 (strong negative correlation) and blue = 1 (strong positive correlation). This first chart is too quickly see correlations because the second correlation plot also has the number representing the correlation number in each box so you can drill deeper into correlation between predictor variables. 
+
+From the importance table from the bagging model and the correlation plot I generated my list of predictor variables: largest_gift, home_value, avg_fam_in, med_fam_inc, pct_lt15k, last_gift, avg_gift, and months_since_donate. 
+
+I then decided to build a handful of models to explore different approaches to see which approach would perform the best. 
+
+The first model built was a random forest since I originally used bagging to generate an importance table I figured the random forest model would perform well in this classification problem.It performed the worst of all the models.
+
+The second model built was a Support Vector Machine utilizing a polynomial function for the kernel. It performed the second best only losing to the SVM-Poly. 
+
+The third model built was a Support Vector Machine utilizing a radial function for the kernel. It performed the best and was the model that was used on the test data.
+
+The fourth model built was a Support Vector Machine utilizing a linear function for the kernel. It performed in the middle of the pack and was beat out by the non-linear versions of SVM.
+
+The fifth model built was generalized linear model since I was curious to how it would perform considering by this point it seemed certain the relationship was non-linear. The GLM's use of link functions allowed for this to work and the model performed okay.
+
+The sixth and final model was a linear discriminant analysis since GLM performed okay I wanted to see how an LDA would fare on this problem. LDA was used instead of linear regression since this is a classification problem
+
+
+
+
+***
+
+### Exclusions
+
+Zip codes were removed from the data since they were not relevant to the analysis that was being run.
+
+***
+
+### Variable Transformations
+Female and homeowner had to be converted to the numeric data type so correlation functions could be executed on them.
+
+***
+
+
+### Model Performance and Result Validation
+
+For each model I built I used the accuracy calculated by the function due to cross-validation.
+
+SVM-Polynomial was the most accurate so it was the model that was ran on the test data. 
+
+          Model     |      Accuracy
+  --------------------------------------
+     Random Forests |       53.01%
+      SVM-Radial    |       55.18%
+       SVM-Poly     |       55.83%
+      SVM-Linear    |       54.51%
+          GLM       |       54.82%
+          LDA       |       54.71%
+
+***
+
+### Recommendation
+
+The model performed rather well in absolute terms since the final accuracy was 55.83% of predicting people who would donate. This a giant leap compared to the mass mailing campaigns response rate of 5.1%. The model should be tried on a limited set of the overall larger data set to make sure real world performance mirrors test data performance. Also, the creation of a new data set that is more robust could help if it had more predictor variables. Especially in this context a predictor variable based on if someone is a veteran or is close to a veteran could help strengthen the model. 
+
+
+
+
+
+
+
+
+
+
+
+
+
